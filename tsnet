@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# tsnet: quickly swap between Tailscale networks (tailnets).
+# Wraps `tailscale switch`, which keeps a login profile per tailnet.
+#
+# Usage:
+#   tsnet                 show current tailnet and the list
+#   tsnet ls              list saved tailnets
+#   tsnet <name>          switch (matches ID, tailnet name, or account; substring ok)
+#   tsnet next            cycle to the next tailnet (handy with two)
+#   tsnet add             log in to an additional tailnet
+#   tsnet alias <a> <n>   save alias <a> for tailnet <n> (e.g. tsnet alias work corp.ts.net)
+set -euo pipefail
+
+TS=${TAILSCALE_BIN:-tailscale}
+ALIASES=${XDG_CONFIG_HOME:-$HOME/.config}/tsnet/aliases
+
+list() { $TS switch --list 2>&1 | tail -n +2; }  # drop header; columns: ID Tailnet Account (* = active)
+
+die() { echo "tsnet: $*" >&2; exit 1; }
+
+resolve() {
+  local q=$1
+  if [[ -f $ALIASES ]]; then
+    local a
+    a=$(awk -v k="$q" '$1==k{print $2; exit}' "$ALIASES")
+    [[ -n $a ]] && q=$a
+  fi
+  local m
+  m=$(list | grep -iF -- "$q" || true)
+  [[ -z $m ]] && die "no tailnet matching '$q' (try: tsnet ls)"
+  [[ $(wc -l <<<"$m") -gt 1 ]] && die "'$q' is ambiguous:"$'\n'"$m"
+  awk '{print $1}' <<<"$m"
+}
+
+cmd=${1:-status}
+case $cmd in
+  status|"")
+    list ;;
+  ls|list)
+    list ;;
+  next)
+    mapfile -t ids < <(list | awk '{sub(/\*$/,"",$1); print $1}')
+    cur=$(list | awk '/\*/{sub(/\*$/,"",$1); print $1}')
+    [[ ${#ids[@]} -lt 2 ]] && die "need at least two saved tailnets (tsnet add)"
+    for i in "${!ids[@]}"; do
+      if [[ ${ids[$i]} == "$cur" ]]; then next=${ids[$(( (i+1) % ${#ids[@]} ))]}; fi
+    done
+    $TS switch "$next" && list ;;
+  add)
+    $TS login ;;
+  alias)
+    [[ $# -eq 3 ]] || die "usage: tsnet alias <alias> <tailnet>"
+    mkdir -p "$(dirname "$ALIASES")"
+    { grep -v "^$2 " "$ALIASES" 2>/dev/null || true; echo "$2 $3"; } >"$ALIASES.tmp"
+    mv "$ALIASES.tmp" "$ALIASES"
+    echo "alias '$2' -> $3" ;;
+  -h|--help|help)
+    sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *)
+    id=$(resolve "$cmd")
+    $TS switch "$id" && list ;;
+esac
