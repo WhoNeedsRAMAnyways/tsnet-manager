@@ -35,6 +35,9 @@ impl eframe::App for TSNetApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         ui.horizontal(|ui| {
+            // Margin pad
+            ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+
             ui.heading("Tailscale Networks");
             if ui.button("Refresh").clicked() {
                 self.refresh();
