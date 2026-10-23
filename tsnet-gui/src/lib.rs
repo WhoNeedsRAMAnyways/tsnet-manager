@@ -2,7 +2,7 @@
 
 
 mod app;
-mod shell;
+pub mod shell;
 
 
 pub use app::TSNetApp;
