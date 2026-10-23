@@ -46,21 +46,38 @@ impl eframe::App for TSNetApp {
         // TODO: Switch button on inactive profiles
 
         // Parse through profiles, indicate active
+        
         for p in &self.profiles {
 
             ui.horizontal(|ui| {
+                // Margin Pad
+                ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
 
                 // reserve space for active indicator
-                let (rect, _response) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+                let (rect, _response) = 
+                    ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+                let c = rect.center();
 
-                // colorize the dot on active
-                let color = if p.active {
+                // cPulse + Glow
+                if p.active {
+                    let t = ui.input(|i| i.time) as f32;
+                    let pulse = (t * 2.0).sin() * 0.5 + 0.5;
+
+                    let green = |a: u8| egui::Color32::from_rgba_unmultiplied(40, 200, 80, a);
+                    ui.painter().circle_filled(c, 7.0 + 2.0 * pulse, green((20.0 + 50.0 * pulse ) as u8));
+                    ui.painter().circle_filled(c, 7.0, green(60));
+
+                    ui.ctx().request_repaint_after(std::time::Duration::from_millis(33));
+                }
+                
+                // Center Dot Color
+                let core = if p.active {
                     egui::Color32::from_rgb(40, 200, 80)
                 } else {
                     egui::Color32::GRAY
                 };
 
-                ui.painter().circle_filled(rect.center(), 5.0, color);
+                ui.painter().circle_filled(rect.center(), 5.0, core);
 
 
                 ui.label(format!("ID:{}     Account: {}", p.id, p.account));
