@@ -17,7 +17,7 @@ pub fn list_profiles() -> Result<String, String> {
         .args(["switch", "--list"])
         .output().map_err(|e| e.to_string())?;
 
-    if!output.status.success(){
+    if !output.status.success(){
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }
 
@@ -45,4 +45,18 @@ pub fn parse_profiles(text: &str) -> Vec<Profile> {
             })
         })
     .collect()
+}
+
+
+pub fn switch_profile(id: &str) -> Result<String, String>{
+
+    let output = Command::new("tailscale")
+        .args(["switch", id])
+        .output().map_err(|e| e.to_string())?;
+
+    if !output.status.success(){
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    return Ok(String::from_utf8_lossy(&output.stdout).to_string());
 }

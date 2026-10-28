@@ -46,10 +46,9 @@ impl eframe::App for TSNetApp {
 
         ui.separator();
 
-        // TODO: Switch button on inactive profiles
-
         // Parse through profiles, indicate active
-        
+       
+        let mut to_switch: Option<String> = None; 
         for p in &self.profiles {
 
             ui.horizontal(|ui| {
@@ -85,10 +84,26 @@ impl eframe::App for TSNetApp {
 
                 ui.label(format!("ID:{}     Account: {}", p.id, p.account));
 
+                // Account Switching 
+                if !p.active && ui.button("Switch").clicked() {
+                    to_switch = Some(p.id.clone());
+                }
+
             });
         }
 
-
+        // Button Logic for the account switcher button
+        if let Some(id) = to_switch {
+            match shell::switch_profile(&id) {
+                Ok(_) => {
+                    self.refresh();
+                    self.status = format!("Switched to {}", id);
+                }
+                Err(e) => {
+                    self.status = e;
+                }
+            }
+        }
 
         ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
             ui.label(&self.status);
